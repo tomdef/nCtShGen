@@ -5,14 +5,39 @@ namespace nCtShGen.Api.Providers;
 
 public class ThumbnailProvider
 {
-    public static Image Get(ExifInfo exifInfo, ConfigurationThumbnailItem configurationItem)
+    private readonly ConfigurationThumbnailItem configurationItem = default!;
+
+    public ThumbnailProvider(ConfigurationThumbnailItem configurationItem)
     {
-        // int maxWidth = configurationItem.MaxWidth;
-        // int maxHeight = configurationItem.MaxHeight;
+        this.configurationItem = configurationItem;
+    }
 
-        // Image image = Image.FromFile(exifInfo.Path);
+    public Image GetThumbnail(ExifInfo exifInfo)
+    {
+        var (width, height) = GetThumbnailSize(exifInfo.Width, exifInfo.Height, exifInfo.IsHorizontal());
 
-        // return image.GetThumbnailImage(120, 120, () => false, IntPtr.Zero);
-        return null;
+        Image image = Image.FromFile(exifInfo.Path);
+
+        return (Image)(new Bitmap(image, new Size(width, height)));
+    }
+
+    public (ExifInfo, Image) GetThumbnail(string filePath)
+    {
+        ExifInfo exifInfo = ExifInfoProvider.Read(filePath);
+        Image image = this.GetThumbnail(exifInfo);
+
+        return (exifInfo, image);
+    }
+
+    public (int, int) GetThumbnailSize(int width, int height, bool isHorizontal)
+    {
+        int size = configurationItem.MaxWidth;
+
+        float scale = (isHorizontal) ? (size / (float)width) : (size / (float)height);
+
+        width = (int)(Math.Round(scale * width));
+        height = (int)(Math.Round(scale * height));
+
+        return (width, height);
     }
 }

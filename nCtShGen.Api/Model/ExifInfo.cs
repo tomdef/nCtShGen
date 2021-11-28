@@ -18,8 +18,8 @@ public record ExifInfo
 
     private string ShutterSpeedToString()
     {
-        if (ShutterSpeed < 1)
-            return string.Format("1/{0}", ExposureTime);
+        if (ExposureTime < 1)
+            return string.Format("1/{0}", ShutterSpeed);
         else
             return string.Format("{0}", ExposureTime);
     }
@@ -39,7 +39,7 @@ public record ExifInfo
 
     public override string ToString()
     {
-        return string.Format("ƒ{0} {1}s {2}mm ISO{3}",
+        return string.Format("ƒ{0}  {1}s  {2}mm  ISO{3}",
             ApertureToString(),
             ShutterSpeedToString(),
             FocalLength,
