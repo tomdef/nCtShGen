@@ -21,8 +21,8 @@ public class ContactSheetProviderTests
             RootPhotoFolder = "",
             Thumbnail = new ConfigurationThumbnailItem()
             {
-                MaxWidth = 200,
-                MaxHeight = 200
+                MaxWidth = 300,
+                MaxHeight = 300
             }
         };
 
@@ -39,5 +39,15 @@ public class ContactSheetProviderTests
 
         string name = Path.GetFileName(filePath);
         image.Save(string.Format("d:\\temp\\_test_{0}.jpg", name));
+    }
+
+    [Category("Providers")]
+    [Test]
+    public void ContactSheetProvider_GenerateContactSheet()
+    {
+        string title = "20202001";
+        Image image = contactSheetProvider.GenerateContactSheet(title, @"d:\Temp\TEST_22\", "*.jpg");
+        Assert.NotNull(image);
+        image.Save("d:\\temp\\_contactSheet.jpg");
     }
 }

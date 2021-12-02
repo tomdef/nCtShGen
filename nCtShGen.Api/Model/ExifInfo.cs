@@ -39,7 +39,12 @@ public record ExifInfo
 
     public override string ToString()
     {
-        return string.Format("ƒ{0}  {1}s  {2}mm  ISO{3}",
+        if (Width == 0)
+        {
+            return " (no EXIF data) ";
+        }
+
+        return string.Format("ƒ{0} {1}s {2}mm ISO{3}",
             ApertureToString(),
             ShutterSpeedToString(),
             FocalLength,

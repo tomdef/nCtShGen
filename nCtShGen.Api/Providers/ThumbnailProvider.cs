@@ -18,6 +18,12 @@ public class ThumbnailProvider
 
         Image image = Image.FromFile(exifInfo.Path);
 
+        if (exifInfo.Width == 0)
+        {
+            width = image.Width;
+            height = image.Height;
+        }
+
         return (Image)(new Bitmap(image, new Size(width, height)));
     }
 
