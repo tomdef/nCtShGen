@@ -26,7 +26,7 @@ public class ContactSheetProviderTests
             }
         };
 
-        contactSheetProvider = new ContactSheetProvider(configurationItem);
+        contactSheetProvider = new ContactSheetProvider(configurationItem, ColorSchemaName.Light);
     }
 
     [Category("Providers")]
@@ -47,6 +47,7 @@ public class ContactSheetProviderTests
     {
         string title = "20202001";
         Image image = contactSheetProvider.GenerateContactSheet(title, @"d:\Temp\TEST_22\", "*.jpg");
+        //Image image = contactSheetProvider.GenerateContactSheet(title, @"d:\Temp\T1\", "*.jpg");
         Assert.NotNull(image);
         image.Save("d:\\temp\\_contactSheet.jpg");
     }

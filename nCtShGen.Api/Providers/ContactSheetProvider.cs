@@ -29,15 +29,15 @@ public class ContactSheetProvider
 
     // ------------------------------------------------------------------------
 
-    private Color colorTitle = default!;
-    private Color colorExifInfo = default!;
-    private Color colorContactSheetBackground = default!;
-    private Color colorBackground = default!;
-    private Color colorFrame = default!;
-    private Color colorFrameImage = default!;
+    // private Color colorTitle = default!;
+    // private Color colorExifInfo = default!;
+    // private Color colorContactSheetBackground = default!;
+    // private Color colorBackground = default!;
+    // private Color colorFrame = default!;
+    // private Color colorFrameImage = default!;
 
-    private Color colorCsTitle = default!;
-    private Color colorCsDetails = default!;
+    // private Color colorCsTitle = default!;
+    // private Color colorCsDetails = default!;
 
     // ------------------------------------------------------------------------
 
@@ -56,47 +56,50 @@ public class ContactSheetProvider
     private Font fontCsTitle = default!;
     private Font fontCsDetails = default!;
 
+    private ColorSchema colorSchema = default!;
+
 
     // ------------------------------------------------------------------------
 
-    public ContactSheetProvider(ConfigurationItem configurationItem)
+    public ContactSheetProvider(ConfigurationItem configurationItem, ColorSchemaName colorSchemaName)
     {
         this.configurationItem = configurationItem;
         this.thumbnailProvider = new(configurationItem.Thumbnail);
+        this.colorSchema = ColorSchemaProvider.Get(colorSchemaName);
 
-        CreateColors();
-        CreateFonts();
+        CreateUISettings();
     }
 
-    private void CreateColors()
-    {
-        colorContactSheetBackground = Color.FromKnownColor(KnownColor.Black);
+    // private void CreateColors()
+    // {
+    //     colorContactSheetBackground = Color.FromKnownColor(KnownColor.Black);
 
-        colorTitle = Color.FromKnownColor(KnownColor.Gray);
-        colorExifInfo = Color.FromKnownColor(KnownColor.DarkSlateGray);
+    //     colorTitle = Color.FromKnownColor(KnownColor.Gray);
+    //     colorExifInfo = Color.FromKnownColor(KnownColor.DarkSlateGray);
 
-        colorBackground = Color.FromArgb(10, 10, 10);
-        colorFrame = Color.FromKnownColor(KnownColor.DarkSlateGray);
-        colorFrameImage = Color.FromKnownColor(KnownColor.Gray);
+    //     //colorBackground = Color.FromArgb(10, 10, 10);
+    //     colorBackground = Color.FromArgb(255, 255, 255);
+    //     colorFrame = Color.FromKnownColor(KnownColor.DarkSlateGray);
+    //     colorFrameImage = Color.FromKnownColor(KnownColor.Gray);
 
-        colorCsTitle = Color.FromKnownColor(KnownColor.Gray);
-        colorCsDetails = Color.FromKnownColor(KnownColor.DarkSlateGray);
+    //     colorCsTitle = Color.FromKnownColor(KnownColor.Gray);
+    //     colorCsDetails = Color.FromKnownColor(KnownColor.DarkSlateGray);
+    // }
 
-    }
-    private void CreateFonts()
+    private void CreateUISettings()
     {
         // fonts, brushes & pens
         fontCsiTitle = new("Consolas", 10f, FontStyle.Bold);
         fontCsiExifInfo = new("Consolas", 9f, FontStyle.Regular);
-        brushCsiTitle = new SolidBrush(colorTitle);
-        brushCsiExifInfo = new SolidBrush(colorExifInfo);
-        brushCsiFill = new SolidBrush(colorBackground);
-        penCsi = new(colorFrame, 1);
-        penThumb = new(colorFrameImage, 1);
+        brushCsiTitle = new SolidBrush(colorSchema.ThumbnailTitle);
+        brushCsiExifInfo = new SolidBrush(colorSchema.ThumbnailImageExifInfo);
+        brushCsiFill = new SolidBrush(colorSchema.ThumbnailBackground);
+        penCsi = new(colorSchema.ThumbnailFrame, 1);
+        penThumb = new(colorSchema.ThumbnailImageFrame, 1);
 
-        brushCsFill = new SolidBrush(colorContactSheetBackground);
-        brushCsTitle = new SolidBrush(colorCsTitle);
-        brushCsDetails = new SolidBrush(colorCsDetails);
+        brushCsFill = new SolidBrush(colorSchema.ContactSheetBackground);
+        brushCsTitle = new SolidBrush(colorSchema.ContactSheetTitle);
+        brushCsDetails = new SolidBrush(colorSchema.ContactSheetDetails);
         fontCsTitle = new("Consolas", 14f, FontStyle.Bold);
         fontCsDetails = new("Consolas", 12f, FontStyle.Regular);
     }
@@ -198,7 +201,7 @@ public class ContactSheetProvider
         StringFormat sfTitle = new()
         {
             LineAlignment = StringAlignment.Center,
-            Alignment = StringAlignment.Center
+            Alignment = StringAlignment.Near
         };
         StringFormat sfDetails = new()
         {
