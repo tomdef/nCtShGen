@@ -15,6 +15,7 @@ public record ExifInfo
     public int Width { get; set; }
     public int Height { get; set; }
     public int Orientation { get; set; }
+    public string GpsInfo { get; set; } = string.Empty;
 
     private string ShutterSpeedToString()
     {

@@ -4,6 +4,7 @@ namespace nCtShGen.Api.Model;
 
 internal class ImageWithPosition
 {
+    public string FileName { get; private set; } = default!;
     public Image Image { get; private set; } = default!;
     public Point Position { get; private set; } = default!;
 
@@ -17,8 +18,9 @@ internal class ImageWithPosition
         get { return Position.Y + Image.Height; }
     }
 
-    public ImageWithPosition(Image image, Point position)
+    public ImageWithPosition(string fileName, Image image, Point position)
     {
+        this.FileName = fileName;
         this.Image = image;
         this.Position = position;
     }

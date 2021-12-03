@@ -3,13 +3,11 @@ using System;
 using nCtShGen.Api.Providers;
 using nCtShGen.Api.Model;
 using System.Drawing;
-using System.IO;
 
 namespace nCtShGen.Tests.Tests;
 
 public class ContactSheetProviderTests
 {
-    private ContactSheetProvider contactSheetProvider = default!;
     private ConfigurationItem configurationItem = default!;
 
     [SetUp]
@@ -25,30 +23,31 @@ public class ContactSheetProviderTests
                 MaxHeight = 300
             }
         };
-
-        contactSheetProvider = new ContactSheetProvider(configurationItem, ColorSchemaName.Light);
     }
 
     [Category("Providers")]
-    [TestCase(".\\TestData\\test001.jpg")]
-    [TestCase(".\\TestData\\test002.jpg")]
+    [TestCase(@".\TestData\test001.jpg")]
+    [TestCase(@".\TestData\test002.jpg")]
     public void ContactSheetProvider_GenerateContactSheetItem(string filePath)
     {
+        ContactSheetProvider contactSheetProvider = new(configurationItem, ColorSchemaName.Light);
         Image image = contactSheetProvider.GenerateContactSheetItem(filePath);
         Assert.NotNull(image);
-
-        string name = Path.GetFileName(filePath);
-        image.Save(string.Format("d:\\temp\\_test_{0}.jpg", name));
     }
 
     [Category("Providers")]
     [Test]
     public void ContactSheetProvider_GenerateContactSheet()
     {
-        string title = "20202001";
-        Image image = contactSheetProvider.GenerateContactSheet(title, @"d:\Temp\TEST_22\", "*.jpg");
-        //Image image = contactSheetProvider.GenerateContactSheet(title, @"d:\Temp\T1\", "*.jpg");
+        ContactSheetProvider contactSheetProvider = new(configurationItem, ColorSchemaName.Default);
+
+        contactSheetProvider.OnAddContactSheetItem += (a, e) => Console.WriteLine("OnAddContactSheetItem : {0}", e.FileName);
+        contactSheetProvider.OnStartGenerateContactSheet += (a, e) => Console.WriteLine("OnStartGenerateContactSheet : {0} [{1}]", e.Folder, e.AllItems);
+        contactSheetProvider.OnFinishGenerateContactSheet += (a, e) => Console.WriteLine("OnFinishGenerateContactSheet : {0} [{1}]", e.Folder, e.AllItems);
+
+        //Image image = contactSheetProvider.GenerateContactSheet("20202001", @".\TestData\", "*.jpg");
+        Image image = contactSheetProvider.GenerateContactSheet("20202001", @"d:\Temp\TEST_22\", "*.jpg");
         Assert.NotNull(image);
-        image.Save("d:\\temp\\_contactSheet.jpg");
+        image.Save("d:\\temp\\_contactSheet_test2.jpg");
     }
 }

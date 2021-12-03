@@ -9,6 +9,10 @@ public class ExifInfoProvider
     {
         ExifImageProperties exif = ExifPhoto.GetExifDataPhoto(imageFileName);
 
+        string gpsInfo = ((exif.GPSInfo.Latitude > 0) && (exif.GPSInfo.Longitude > 0))
+           ? string.Format("{0} {1}", exif.GPSInfo.Latitude, exif.GPSInfo.Longitude)
+           : string.Empty;
+
         return new ExifInfo()
         {
             Name = Path.GetFileName(imageFileName),
@@ -20,7 +24,8 @@ public class ExifInfoProvider
             ShutterSpeed = (float)System.Math.Round(exif.ShutterSpeedValue, 2),
             Width = exif.ExifImageWidth,
             Height = exif.ExifImageHeight,
-            Orientation = (int)exif.Orientation
+            Orientation = (int)exif.Orientation,
+            GpsInfo = gpsInfo
         };
     }
 }

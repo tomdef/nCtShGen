@@ -1,5 +1,7 @@
 using System.Drawing;
+using System.Drawing.Imaging;
 using nCtShGen.Api.Model;
+using nCtShGen.Api.Model.Events;
 
 namespace nCtShGen.Api.Providers;
 
@@ -24,23 +26,6 @@ public class ContactSheetProvider
 
     // ------------------------------------------------------------------------
 
-    private readonly ConfigurationItem configurationItem = default!;
-    private readonly ThumbnailProvider thumbnailProvider = default!;
-
-    // ------------------------------------------------------------------------
-
-    // private Color colorTitle = default!;
-    // private Color colorExifInfo = default!;
-    // private Color colorContactSheetBackground = default!;
-    // private Color colorBackground = default!;
-    // private Color colorFrame = default!;
-    // private Color colorFrameImage = default!;
-
-    // private Color colorCsTitle = default!;
-    // private Color colorCsDetails = default!;
-
-    // ------------------------------------------------------------------------
-
     private Font fontCsiTitle = default!;
     private Font fontCsiExifInfo = default!;
     private Brush brushCsiTitle = default!;
@@ -53,11 +38,21 @@ public class ContactSheetProvider
     private Brush brushCsFill = default!;
     private Brush brushCsTitle = default!;
     private Brush brushCsDetails = default!;
+    private Brush brushCsTitleBackground = default!;
     private Font fontCsTitle = default!;
     private Font fontCsDetails = default!;
 
-    private ColorSchema colorSchema = default!;
+    // ------------------------------------------------------------------------
 
+    private readonly ConfigurationItem configurationItem = default!;
+    private readonly ThumbnailProvider thumbnailProvider = default!;
+    private readonly ColorSchema colorSchema = default!;
+
+    // ------------------------------------------------------------------------
+
+    public event EventHandler<ContactSheetEventArgs> OnStartGenerateContactSheet = default!;
+    public event EventHandler<ContactSheetEventArgs> OnFinishGenerateContactSheet = default!;
+    public event EventHandler<ContactSheetItemEventArgs> OnAddContactSheetItem = default!;
 
     // ------------------------------------------------------------------------
 
@@ -69,22 +64,6 @@ public class ContactSheetProvider
 
         CreateUISettings();
     }
-
-    // private void CreateColors()
-    // {
-    //     colorContactSheetBackground = Color.FromKnownColor(KnownColor.Black);
-
-    //     colorTitle = Color.FromKnownColor(KnownColor.Gray);
-    //     colorExifInfo = Color.FromKnownColor(KnownColor.DarkSlateGray);
-
-    //     //colorBackground = Color.FromArgb(10, 10, 10);
-    //     colorBackground = Color.FromArgb(255, 255, 255);
-    //     colorFrame = Color.FromKnownColor(KnownColor.DarkSlateGray);
-    //     colorFrameImage = Color.FromKnownColor(KnownColor.Gray);
-
-    //     colorCsTitle = Color.FromKnownColor(KnownColor.Gray);
-    //     colorCsDetails = Color.FromKnownColor(KnownColor.DarkSlateGray);
-    // }
 
     private void CreateUISettings()
     {
@@ -100,8 +79,9 @@ public class ContactSheetProvider
         brushCsFill = new SolidBrush(colorSchema.ContactSheetBackground);
         brushCsTitle = new SolidBrush(colorSchema.ContactSheetTitle);
         brushCsDetails = new SolidBrush(colorSchema.ContactSheetDetails);
-        fontCsTitle = new("Consolas", 14f, FontStyle.Bold);
-        fontCsDetails = new("Consolas", 12f, FontStyle.Regular);
+        brushCsTitleBackground = new SolidBrush(colorSchema.ThumbnailBackground);
+        fontCsTitle = new("Consolas", 12f, FontStyle.Bold);
+        fontCsDetails = new("Consolas", 11f, FontStyle.Regular);
     }
 
     public Image GenerateContactSheetItem(string filePath)
@@ -129,13 +109,43 @@ public class ContactSheetProvider
         gs.DrawString(exifInfo.Name, fontCsiTitle, brushCsiTitle, csiImageX, 1);
         gs.DrawString(exifInfo.ToString(), fontCsiExifInfo, brushCsiExifInfo, csiImageX, (csiHeight - csiBottomMargin) + 1);
 
+        // draw additional information
+        if (!string.IsNullOrEmpty(exifInfo.GpsInfo))
+        {
+            string iconPath = string.Format("{0}.Icons.gps.png", System.Reflection.Assembly.GetExecutingAssembly().GetName().Name);
+            var iconResource = System.Reflection.Assembly.GetExecutingAssembly().GetManifestResourceStream(iconPath);
+            if (iconResource != null)
+            {
+                Bitmap iconGps = new(iconResource);
+
+                //create a color matrix object  
+                ColorMatrix matrix = new()
+                {
+                    Matrix33 = 0.3f
+                };
+
+                ImageAttributes iconAttributes = new();
+                iconAttributes.SetColorMatrix(matrix, ColorMatrixFlag.Default, ColorAdjustType.Bitmap);
+
+                //now draw the image  
+                if (iconGps != null)
+                {
+                    Rectangle destRect = new(image.Width - 16, image.Height - 5, iconGps.Width, iconGps.Height);
+                    gs.DrawImage(iconGps, destRect, 0, 0, iconGps.Width, iconGps.Height, GraphicsUnit.Pixel, iconAttributes);
+                }
+            }
+        }
+
         return (Image)(csItem);
     }
 
     public Image GenerateContactSheet(string title, string folderPath, string filter = "*.*")
     {
+        OnStartGenerateContactSheet?.Invoke(this, new ContactSheetEventArgs(folderPath, 0));
+
         int currYInit = contactSheetTitleHeight + contactSheetTopMargin;
-        int currX = 0;
+        int currXInit = margin;
+        int currX = currXInit;
         int currY = currYInit;
 
         int csWidth = 0;
@@ -166,12 +176,12 @@ public class ContactSheetProvider
 
             if (tmp > configurationItem.MaxContactSheetWidth)
             {
-                currX = 0;
+                currX = currXInit;
                 currY += maxHeightInRow + margin;
                 maxHeightInRow = img.Height;
             }
 
-            ImageWithPosition newItem = new(img, new Point(currX, currY));
+            ImageWithPosition newItem = new(filePath, img, new Point(currX, currY));
             positions.Add(newItem);
 
             tmp = (currX + img.Width + margin);
@@ -190,9 +200,13 @@ public class ContactSheetProvider
         Graphics gs = Graphics.FromImage(csImage);
 
         // frame
-        gs.FillRectangle(brushCsFill, 0, 0, csImage.Width - 1, csImage.Height - 1);
-        Rectangle contactSheetTitleRectangle = new(0, 0, csImage.Width - 1, contactSheetTitleHeight - 1);
-        gs.DrawRectangle(penCsi, 0, 0, csImage.Width - 1, contactSheetTitleHeight - 1);
+        gs.FillRectangle(brushCsFill, 0, 0, csImage.Width, csImage.Height);
+
+        Rectangle contactSheetTitleRectangle = new(0, 0, csImage.Width - 1, contactSheetTitleHeight);
+        gs.FillRectangle(brushCsTitleBackground, contactSheetTitleRectangle);
+        gs.DrawRectangle(penCsi, contactSheetTitleRectangle);
+        //gs.FillRectangle(brushCsTitleBackground, 0, 0, csImage.Width - 1, contactSheetTitleHeight);
+        //gs.DrawRectangle(penCsi, 0, 0, csImage.Width - 1, contactSheetTitleHeight);
 
         // title
         string contactSheetTitle = string.Format("[{0}]", title);
@@ -208,6 +222,7 @@ public class ContactSheetProvider
             LineAlignment = StringAlignment.Center,
             Alignment = StringAlignment.Far
         };
+
         gs.DrawString(contactSheetTitle, fontCsTitle, brushCsTitle, contactSheetTitleRectangle, sfTitle);
         gs.DrawString(contactSheetDetails, fontCsDetails, brushCsDetails, contactSheetTitleRectangle, sfDetails);
 
@@ -216,7 +231,10 @@ public class ContactSheetProvider
         foreach (ImageWithPosition iwp in positions)
         {
             gs.DrawImage(iwp.Image, iwp.Position);
+            OnAddContactSheetItem?.Invoke(this, new ContactSheetItemEventArgs(iwp.FileName));
         }
+
+        OnFinishGenerateContactSheet?.Invoke(this, new ContactSheetEventArgs(folderPath, positions.Count));
 
         return (Image)csImage;
     }
