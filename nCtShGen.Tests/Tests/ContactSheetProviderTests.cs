@@ -45,9 +45,7 @@ public class ContactSheetProviderTests
         contactSheetProvider.OnStartGenerateContactSheet += (a, e) => Console.WriteLine("OnStartGenerateContactSheet : {0} [{1}]", e.Folder, e.AllItems);
         contactSheetProvider.OnFinishGenerateContactSheet += (a, e) => Console.WriteLine("OnFinishGenerateContactSheet : {0} [{1}]", e.Folder, e.AllItems);
 
-        //Image image = contactSheetProvider.GenerateContactSheet("20202001", @".\TestData\", "*.jpg");
-        Image image = contactSheetProvider.GenerateContactSheet("20202001", @"d:\Temp\TEST_22\", "*.jpg");
+        Image image = contactSheetProvider.GenerateContactSheet("20202001", @".\TestData\", "*.jpg");
         Assert.NotNull(image);
-        image.Save("d:\\temp\\_contactSheet_test2.jpg");
     }
 }

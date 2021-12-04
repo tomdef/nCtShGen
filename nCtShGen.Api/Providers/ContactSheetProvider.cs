@@ -69,7 +69,7 @@ public class ContactSheetProvider
     {
         // fonts, brushes & pens
         fontCsiTitle = new("Consolas", 10f, FontStyle.Bold);
-        fontCsiExifInfo = new("Consolas", 9f, FontStyle.Regular);
+        fontCsiExifInfo = new("Consolas", 8f, FontStyle.Regular);
         brushCsiTitle = new SolidBrush(colorSchema.ThumbnailTitle);
         brushCsiExifInfo = new SolidBrush(colorSchema.ThumbnailImageExifInfo);
         brushCsiFill = new SolidBrush(colorSchema.ThumbnailBackground);
@@ -80,8 +80,8 @@ public class ContactSheetProvider
         brushCsTitle = new SolidBrush(colorSchema.ContactSheetTitle);
         brushCsDetails = new SolidBrush(colorSchema.ContactSheetDetails);
         brushCsTitleBackground = new SolidBrush(colorSchema.ThumbnailBackground);
-        fontCsTitle = new("Consolas", 12f, FontStyle.Bold);
-        fontCsDetails = new("Consolas", 11f, FontStyle.Regular);
+        fontCsTitle = new("Consolas", 11f, FontStyle.Bold);
+        fontCsDetails = new("Consolas", 10f, FontStyle.Regular);
     }
 
     public Image GenerateContactSheetItem(string filePath)
@@ -147,6 +147,7 @@ public class ContactSheetProvider
         int currXInit = margin;
         int currX = currXInit;
         int currY = currYInit;
+        int csMinimumWidth = this.configurationItem.Thumbnail.MaxWidth * 2;
 
         int csWidth = 0;
         int csHeight = 0;
@@ -196,6 +197,11 @@ public class ContactSheetProvider
                 csHeight = tmp;
         }
 
+        if (csWidth < csMinimumWidth)
+        {
+            csWidth = csMinimumWidth;
+        }
+
         Bitmap csImage = new(csWidth, csHeight);
         Graphics gs = Graphics.FromImage(csImage);
 
@@ -205,12 +211,10 @@ public class ContactSheetProvider
         Rectangle contactSheetTitleRectangle = new(0, 0, csImage.Width - 1, contactSheetTitleHeight);
         gs.FillRectangle(brushCsTitleBackground, contactSheetTitleRectangle);
         gs.DrawRectangle(penCsi, contactSheetTitleRectangle);
-        //gs.FillRectangle(brushCsTitleBackground, 0, 0, csImage.Width - 1, contactSheetTitleHeight);
-        //gs.DrawRectangle(penCsi, 0, 0, csImage.Width - 1, contactSheetTitleHeight);
 
         // title
         string contactSheetTitle = string.Format("[{0}]", title);
-        string contactSheetDetails = string.Format("Folder [{0}] contains [{1}] image(s)", folderPath, positions.Count);
+        string contactSheetDetails = string.Format("[{0}] ● [{1}] image(s)", folderPath, positions.Count);
 
         StringFormat sfTitle = new()
         {

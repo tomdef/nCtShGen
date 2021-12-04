@@ -1,5 +1,7 @@
 using System;
 using System.Diagnostics.Contracts;
+using System.Drawing;
+using System.Globalization;
 
 namespace nCtShGen.Api.Model;
 
@@ -15,22 +17,33 @@ public record ExifInfo
     public int Width { get; set; }
     public int Height { get; set; }
     public int Orientation { get; set; }
+    public RotateFlipType RotateType { get; set; }
     public string GpsInfo { get; set; } = string.Empty;
 
     private string ShutterSpeedToString()
     {
         if (ExposureTime < 1)
-            return string.Format("1/{0}", ShutterSpeed);
+            return string.Format(CultureInfo.InvariantCulture, "1/{0:0}", ShutterSpeed);
         else
-            return string.Format("{0}", ExposureTime);
+            return string.Format(CultureInfo.InvariantCulture, "{0:0}", ExposureTime);
     }
 
     private string ApertureToString()
     {
-        if (Aperture % 1 == 0)
-            return Aperture.ToString("0", System.Globalization.CultureInfo.InvariantCulture);
-        else
-            return Aperture.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture);
+        return string.Format(CultureInfo.InvariantCulture, "{0:#}", Aperture);
+        // if (Aperture % 1 == 0)
+        //     return Aperture.ToString("0", CultureInfo.InvariantCulture);
+        // else
+        //     return Aperture.ToString("0.#", CultureInfo.InvariantCulture);
+    }
+
+    private string FocalLengthToString()
+    {
+        return string.Format(CultureInfo.InvariantCulture, "{0:#}", FocalLength);
+        // if (Aperture % 1 == 0)
+        //     return Aperture.ToString("0", CultureInfo.InvariantCulture);
+        // else
+        //     return Aperture.ToString("0.#", CultureInfo.InvariantCulture);
     }
 
     public bool IsHorizontal()
@@ -45,10 +58,10 @@ public record ExifInfo
             return " (no EXIF data) ";
         }
 
-        return string.Format("ƒ{0} {1}s {2}mm ISO{3}",
+        return string.Format("ƒ{0} {1}s {2}mm Iso{3}",
             ApertureToString(),
             ShutterSpeedToString(),
-            FocalLength,
+            FocalLengthToString(),
             Iso);
     }
 }

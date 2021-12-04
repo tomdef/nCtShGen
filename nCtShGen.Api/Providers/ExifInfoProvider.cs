@@ -1,3 +1,4 @@
+using System.Drawing;
 using ExifPhotoReader;
 using nCtShGen.Api.Model;
 
@@ -13,6 +14,17 @@ public class ExifInfoProvider
            ? string.Format("{0} {1}", exif.GPSInfo.Latitude, exif.GPSInfo.Longitude)
            : string.Empty;
 
+        RotateFlipType rotateType = RotateFlipType.RotateNoneFlipNone;
+
+        switch (exif.Orientation)
+        {
+            case Orientation.Rotate270:
+                {
+                    rotateType = RotateFlipType.Rotate270FlipNone;
+                    break;
+                }
+        }
+
         return new ExifInfo()
         {
             Name = Path.GetFileName(imageFileName),
@@ -25,6 +37,7 @@ public class ExifInfoProvider
             Width = exif.ExifImageWidth,
             Height = exif.ExifImageHeight,
             Orientation = (int)exif.Orientation,
+            RotateType = rotateType,
             GpsInfo = gpsInfo
         };
     }

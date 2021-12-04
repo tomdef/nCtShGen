@@ -1,4 +1,6 @@
+using System.Collections;
 using System.Drawing;
+using ExifPhotoReader;
 using nCtShGen.Api.Model;
 
 namespace nCtShGen.Api.Providers;
@@ -17,14 +19,21 @@ public class ThumbnailProvider
         var (width, height) = GetThumbnailSize(exifInfo.Width, exifInfo.Height, exifInfo.IsHorizontal());
 
         Image image = Image.FromFile(exifInfo.Path);
+        image = (Image)(new Bitmap(image, new Size(width, height)));
 
-        if (exifInfo.Width == 0)
+        if (exifInfo.RotateType != RotateFlipType.RotateNoneFlipNone)
         {
-            width = image.Width;
-            height = image.Height;
+            image.RotateFlip(exifInfo.RotateType);
         }
 
-        return (Image)(new Bitmap(image, new Size(width, height)));
+        // if ((exifInfo.Width == 0) || (exifInfo.Height == 0) ||
+        //     (exifInfo.RotateType != RotateFlipType.RotateNoneFlipNone))
+        // {
+        //     width = image.Width;
+        //     height = image.Height;
+        // }
+
+        return image;
     }
 
     public (ExifInfo, Image) GetThumbnail(string filePath)
