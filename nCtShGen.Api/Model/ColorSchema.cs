@@ -4,6 +4,8 @@ namespace nCtShGen.Api.Model;
 
 public record ColorSchema
 {
+    public ColorSchemaName Name { get; set; } = default!;
+
     public Color ContactSheetBackground { get; set; } = default!;
     public Color ContactSheetTitle { get; set; } = default!;
     public Color ContactSheetDetails { get; set; } = default!;

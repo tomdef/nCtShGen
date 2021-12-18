@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
 using nCtShGen.Api.Model;
@@ -46,6 +47,7 @@ public class ContactSheetProvider
 
     private readonly ConfigurationItem configurationItem = default!;
     private readonly ThumbnailProvider thumbnailProvider = default!;
+    private readonly ColorSchemaProvider colorSchemaProvider = default!;
     private readonly ColorSchema colorSchema = default!;
 
     // ------------------------------------------------------------------------
@@ -53,6 +55,7 @@ public class ContactSheetProvider
     public event EventHandler<ContactSheetEventArgs> OnStartGenerateContactSheet = default!;
     public event EventHandler<ContactSheetEventArgs> OnFinishGenerateContactSheet = default!;
     public event EventHandler<ContactSheetItemEventArgs> OnAddContactSheetItem = default!;
+    public event EventHandler<ContactSheetItemWarningEventArgs> OnWarningContactSheetItem = default!;
 
     // ------------------------------------------------------------------------
 
@@ -60,7 +63,8 @@ public class ContactSheetProvider
     {
         this.configurationItem = configurationItem;
         this.thumbnailProvider = new(configurationItem.Thumbnail);
-        this.colorSchema = ColorSchemaProvider.Get(colorSchemaName);
+        this.colorSchemaProvider = new();
+        this.colorSchema = colorSchemaProvider.Get(colorSchemaName);
 
         CreateUISettings();
     }
@@ -69,7 +73,7 @@ public class ContactSheetProvider
     {
         // fonts, brushes & pens
         fontCsiTitle = new("Consolas", 10f, FontStyle.Bold);
-        fontCsiExifInfo = new("Consolas", 8f, FontStyle.Regular);
+        fontCsiExifInfo = new("Consolas", 9f, FontStyle.Regular);
         brushCsiTitle = new SolidBrush(colorSchema.ThumbnailTitle);
         brushCsiExifInfo = new SolidBrush(colorSchema.ThumbnailImageExifInfo);
         brushCsiFill = new SolidBrush(colorSchema.ThumbnailBackground);
@@ -84,9 +88,13 @@ public class ContactSheetProvider
         fontCsDetails = new("Consolas", 10f, FontStyle.Regular);
     }
 
-    public Image GenerateContactSheetItem(string filePath)
+    public Image? GenerateContactSheetItem(string filePath)
     {
         var (exifInfo, image) = thumbnailProvider.GetThumbnail(filePath);
+        if (image == null)
+        {
+            return null;
+        }
 
         // ContactSheet item size
         int csiWidth = image.Width + csiWidthMargin;
@@ -139,7 +147,7 @@ public class ContactSheetProvider
         return (Image)(csItem);
     }
 
-    public Image GenerateContactSheet(string title, string folderPath, string filter = "*.*")
+    public Image? GenerateContactSheet(string title, string folderPath, string filter = "*.jpg")
     {
         OnStartGenerateContactSheet?.Invoke(this, new ContactSheetEventArgs(folderPath, 0));
 
@@ -156,16 +164,30 @@ public class ContactSheetProvider
 
         var options = new EnumerationOptions()
         {
-            MaxRecursionDepth = configurationItem.FolderDeepLevel
+            MaxRecursionDepth = configurationItem.ContactSheetSubfolderDeepLevel,
+            RecurseSubdirectories = true,
+            IgnoreInaccessible = true,
+            ReturnSpecialDirectories = false
         };
 
         List<ImageWithPosition> positions = new();
         string[] files = Directory.GetFiles(folderPath, filter, options);
 
+        if (!files.Any())
+        {
+            return null;
+        }
+
         // add thumbnails to collection and calculate contactsheet size
         foreach (string filePath in files)
         {
-            Image img = GenerateContactSheetItem(filePath);
+            Image? img = GenerateContactSheetItem(filePath);
+
+            if (img == null)
+            {
+                OnWarningContactSheetItem?.Invoke(this, new ContactSheetItemWarningEventArgs(filePath, "Exif info does not exists."));
+                continue;
+            }
 
             if (img.Height > maxHeightInRow)
             {
@@ -240,8 +262,16 @@ public class ContactSheetProvider
 
         OnFinishGenerateContactSheet?.Invoke(this, new ContactSheetEventArgs(folderPath, positions.Count));
 
+        // var data = System.Text.Encoding.UTF8.GetBytes("nCtShGen v.1 ");
+        // data[data.Length - 1] = 0; // Strings must be null terminated or they will run together
+        // var piAppName = (PropertyItem)System.Runtime.Serialization.FormatterServices.GetUninitializedObject(typeof(PropertyItem));
+        // piAppName.Type = 2;
+        // piAppName.Id = 40095;
+        // piAppName.Len = data.Length;
+        // piAppName.Value = data;
+
+        // ((Image)csImage).SetPropertyItem(piAppName);
+
         return (Image)csImage;
     }
-
-
 }

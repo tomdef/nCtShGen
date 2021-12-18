@@ -6,42 +6,24 @@ namespace nCtShGen.Api.Providers;
 
 public class ColorSchemaProvider
 {
-    public static ColorSchema Get(ColorSchemaName colorSchemaName)
+    private readonly List<ColorSchema> colorSchemaCollection;
+
+    public ColorSchemaProvider()
     {
-        switch (colorSchemaName)
-        {
-            case ColorSchemaName.Light:
-                {
-                    return new()
-                    {
-                        ContactSheetBackground = Color.FromKnownColor(KnownColor.White),
-                        ContactSheetDetails = Color.FromKnownColor(KnownColor.Gray),
-                        ContactSheetTitle = Color.FromKnownColor(KnownColor.DarkSlateGray),
-                        ThumbnailBackground = Color.FromKnownColor(KnownColor.AntiqueWhite),
-                        ThumbnailFrame = Color.FromKnownColor(KnownColor.Silver),
-                        ThumbnailImageFrame = Color.FromKnownColor(KnownColor.Gray),
-                        ThumbnailImageExifInfo = Color.FromKnownColor(KnownColor.DarkSlateGray),
-                        ThumbnailTitle = Color.FromKnownColor(KnownColor.Black)
-                    };
-                }
-            case ColorSchemaName.Dark:
-                {
-                    return new()
-                    {
+        colorSchemaCollection = new List<ColorSchema>() {
+            new ColorSchema() {
+                        Name = ColorSchemaName.Dark,
                         ContactSheetBackground = Color.FromKnownColor(KnownColor.Black),
                         ContactSheetDetails = Color.FromKnownColor(KnownColor.DarkSlateGray),
-                        ContactSheetTitle = Color.FromKnownColor(KnownColor.Gray),
-                        ThumbnailBackground = Color.FromArgb(10, 10, 10),
+                        ContactSheetTitle = Color.FromKnownColor(KnownColor.DarkGray),
+                        ThumbnailBackground = Color.FromKnownColor(KnownColor.Black),
                         ThumbnailFrame = Color.FromKnownColor(KnownColor.DarkSlateGray),
-                        ThumbnailImageFrame = Color.FromKnownColor(KnownColor.Gray),
+                        ThumbnailImageFrame = Color.FromKnownColor(KnownColor.DarkGray),
                         ThumbnailImageExifInfo = Color.FromKnownColor(KnownColor.DarkSlateGray),
-                        ThumbnailTitle = Color.FromKnownColor(KnownColor.Gray)
-                    };
-                }
-            default:
-                {
-                    return new()
-                    {
+                        ThumbnailTitle = Color.FromKnownColor(KnownColor.DarkGray)
+            },
+             new ColorSchema() {
+                        Name = ColorSchemaName.Light,
                         ContactSheetBackground = Color.FromKnownColor(KnownColor.Window),
                         ContactSheetDetails = Color.FromKnownColor(KnownColor.WindowText),
                         ContactSheetTitle = Color.FromKnownColor(KnownColor.WindowText),
@@ -50,8 +32,17 @@ public class ColorSchemaProvider
                         ThumbnailImageFrame = Color.FromKnownColor(KnownColor.WindowFrame),
                         ThumbnailImageExifInfo = Color.FromKnownColor(KnownColor.ActiveCaptionText),
                         ThumbnailTitle = Color.FromKnownColor(KnownColor.ActiveCaptionText)
-                    };
-                }
-        }
+             }
+        };
+    }
+
+    public ColorSchema Get(ColorSchemaName colorSchemaName)
+    {
+        return colorSchemaCollection.First(c => c.Name == colorSchemaName);
+    }
+
+    public ColorSchema Get()
+    {
+        return colorSchemaCollection.First(c => c.Name == ColorSchemaName.Dark);
     }
 }

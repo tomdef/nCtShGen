@@ -17,7 +17,7 @@ public class ExifInfoTests
     {
         List<KeyValuePair<string, ExifInfo>> testItems = new()
         {
-            new KeyValuePair<string, ExifInfo>("ƒ5.6 1s 16mm ISO400",
+            new KeyValuePair<string, ExifInfo>("ƒ5.6 1s 16mm Iso400",
                 new()
                 {
                     Aperture = 5.6f,
@@ -31,7 +31,7 @@ public class ExifInfoTests
                     Width = 1920
                 }
             ),
-            new KeyValuePair<string, ExifInfo>("ƒ4 1/80s 35mm ISO100",
+            new KeyValuePair<string, ExifInfo>("ƒ4 1/80s 35mm Iso100",
                 new()
                 {
                     Aperture = 4f,

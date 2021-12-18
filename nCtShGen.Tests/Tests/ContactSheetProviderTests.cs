@@ -15,8 +15,6 @@ public class ContactSheetProviderTests
     {
         configurationItem = new ConfigurationItem()
         {
-            FolderDeepLevel = 0,
-            RootPhotoFolder = "",
             Thumbnail = new ConfigurationThumbnailItem()
             {
                 MaxWidth = 300,
@@ -31,7 +29,7 @@ public class ContactSheetProviderTests
     public void ContactSheetProvider_GenerateContactSheetItem(string filePath)
     {
         ContactSheetProvider contactSheetProvider = new(configurationItem, ColorSchemaName.Light);
-        Image image = contactSheetProvider.GenerateContactSheetItem(filePath);
+        Image? image = contactSheetProvider.GenerateContactSheetItem(filePath);
         Assert.NotNull(image);
     }
 
@@ -39,13 +37,16 @@ public class ContactSheetProviderTests
     [Test]
     public void ContactSheetProvider_GenerateContactSheet()
     {
-        ContactSheetProvider contactSheetProvider = new(configurationItem, ColorSchemaName.Default);
+        ContactSheetProvider contactSheetProvider = new(configurationItem, ColorSchemaName.Dark);
 
         contactSheetProvider.OnAddContactSheetItem += (a, e) => Console.WriteLine("OnAddContactSheetItem : {0}", e.FileName);
         contactSheetProvider.OnStartGenerateContactSheet += (a, e) => Console.WriteLine("OnStartGenerateContactSheet : {0} [{1}]", e.Folder, e.AllItems);
         contactSheetProvider.OnFinishGenerateContactSheet += (a, e) => Console.WriteLine("OnFinishGenerateContactSheet : {0} [{1}]", e.Folder, e.AllItems);
+        contactSheetProvider.OnWarningContactSheetItem += (a, e) => Console.WriteLine("OnWarningContactSheetItem : {0} [{1}]", e.FileName, e.Details);
 
-        Image image = contactSheetProvider.GenerateContactSheet("20202001", @".\TestData\", "*.jpg");
+        Image? image = contactSheetProvider.GenerateContactSheet("20202001", @"TestData");
         Assert.NotNull(image);
+        if (image != null)
+            image.Save("d:\\temp\\test.jpg");
     }
 }

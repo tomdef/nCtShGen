@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Drawing;
 using ExifPhotoReader;
+using Microsoft.Extensions.FileProviders;
 using nCtShGen.Api.Model;
 
 namespace nCtShGen.Api.Providers;
@@ -16,9 +17,10 @@ public class ThumbnailProvider
 
     public Image GetThumbnail(ExifInfo exifInfo)
     {
+        Image image = Image.FromFile(exifInfo.Path);
         var (width, height) = GetThumbnailSize(exifInfo.Width, exifInfo.Height, exifInfo.IsHorizontal());
 
-        Image image = Image.FromFile(exifInfo.Path);
+
         image = (Image)(new Bitmap(image, new Size(width, height)));
 
         if (exifInfo.RotateType != RotateFlipType.RotateNoneFlipNone)
@@ -36,9 +38,15 @@ public class ThumbnailProvider
         return image;
     }
 
-    public (ExifInfo, Image) GetThumbnail(string filePath)
+    public (ExifInfo, Image?) GetThumbnail(string filePath)
     {
         ExifInfo exifInfo = ExifInfoProvider.Read(filePath);
+
+        if ((exifInfo.Width == 0) || (exifInfo.Height == 0))
+        {
+            return (exifInfo, null);
+        }
+
         Image image = this.GetThumbnail(exifInfo);
 
         return (exifInfo, image);

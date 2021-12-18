@@ -30,11 +30,11 @@ public record ExifInfo
 
     private string ApertureToString()
     {
-        return string.Format(CultureInfo.InvariantCulture, "{0:#}", Aperture);
-        // if (Aperture % 1 == 0)
-        //     return Aperture.ToString("0", CultureInfo.InvariantCulture);
-        // else
-        //     return Aperture.ToString("0.#", CultureInfo.InvariantCulture);
+        //return string.Format(CultureInfo.InvariantCulture, "{0:#}", Aperture);
+        if (Aperture % 1 == 0)
+            return Aperture.ToString("0", CultureInfo.InvariantCulture);
+        else
+            return Aperture.ToString("0.#", CultureInfo.InvariantCulture);
     }
 
     private string FocalLengthToString()

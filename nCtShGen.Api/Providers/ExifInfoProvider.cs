@@ -23,7 +23,12 @@ public class ExifInfoProvider
                     rotateType = RotateFlipType.Rotate270FlipNone;
                     break;
                 }
-        }
+            case Orientation.Rotate90:
+                {
+                    rotateType = RotateFlipType.Rotate90FlipNone;
+                    break;
+                }
+        };
 
         return new ExifInfo()
         {
