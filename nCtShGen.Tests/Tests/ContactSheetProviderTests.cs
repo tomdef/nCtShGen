@@ -46,7 +46,5 @@ public class ContactSheetProviderTests
 
         Image? image = contactSheetProvider.GenerateContactSheet("20202001", @"TestData");
         Assert.NotNull(image);
-        if (image != null)
-            image.Save("d:\\temp\\test.jpg");
     }
 }

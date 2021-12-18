@@ -40,9 +40,8 @@ public class ThumbnailProviderTests
     {
         var (_, img) = tp.GetThumbnail(filePath);
 
+        Assert.NotNull(img);
         Assert.AreEqual(expectedWidth, img.Width);
         Assert.AreEqual(expectedHeight, img.Height);
-
-        img.Save(string.Format("d:\\temp\\_{0}.jpg", Path.GetFileName(filePath)));
     }
 }
