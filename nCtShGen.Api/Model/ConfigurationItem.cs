@@ -10,5 +10,6 @@ public record ConfigurationItem
     public byte ContactSheetRootFolderOnLevel { get; set; } = default!;
     public byte ContactSheetSubfolderDeepLevel { get; set; } = default!;
     public int MaxContactSheetWidth { get; set; } = 1900;
+    public ExistsAction ContactSheetExistsAction { get; set; } = ExistsAction.Skip;
     public ConfigurationThumbnailItem Thumbnail { get; set; } = default!;
 }

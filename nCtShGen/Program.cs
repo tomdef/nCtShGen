@@ -1,55 +1,63 @@
-﻿using System;
-using System.CommandLine;
+﻿using System.CommandLine;
 using System.CommandLine.Invocation;
 using nCtShGen.Api.Providers;
 using System.Diagnostics;
-using System.Globalization;
-using System.IO;
-using System.Security.Cryptography;
-using System.Security.Cryptography.X509Certificates;
-using System.Text.RegularExpressions;
-using System.Drawing.Drawing2D;
-using System.Data;
-using System.Reflection;
+using nCtShGen.Api.Model;
+using Microsoft.Extensions.Logging;
 
 namespace nCtShGen
 {
     public class Program
     {
+        private static ILogger logger = default!;
+
         public static int Main(params string[] args)
         {
+
+            using var loggerFactory = LoggerFactory.Create(builder =>
+            {
+                builder
+                    .AddConsole(options => options.FormatterName = "nCtShGenLoggerFormatter")
+                    .AddConsoleFormatter<nCtShGen.LoggerFormatter, nCtShGen.LoggerOptions>()
+                    .AddFilter("nCtShGen", LogLevel.Trace);
+            });
+
+            logger = loggerFactory.CreateLogger<Program>();
+
             RootCommand rootCommand = new("Tool to generate contact sheet(s) for images.");
 
             Command generateCommand = new("generate", "Generate contactsheet(s).");
 
-            Option imagesFolderOption = new(aliases: new[] { "--imgFolder", "-i" },
+            Option photoFolderOption = new(aliases: new[] { "--photoFolder", "-p" },
                     description: "Image(s) input folder.",
-                    argumentType: typeof(string))
-            {
-                IsRequired = true
-            };
-
-            Option contactSheetFolderOption = new(aliases: new[] { "--csFolder", "-c" },
-                    description: "Contactsheet(s) output folder.",
-                    argumentType: typeof(string))
-            {
-                IsRequired = true
-            };
-
-            Option overrideOption = new(aliases: new[] { "--override", "-o" },
-                    description: "Override if contact sheet exists",
-                    argumentType: typeof(bool),
-                    getDefaultValue: () => false)
+                    argumentType: typeof(string),
+                    getDefaultValue: () => string.Empty)
             {
                 IsRequired = false
             };
 
-            generateCommand.AddOption(imagesFolderOption);
-            generateCommand.AddOption(contactSheetFolderOption);
-            generateCommand.AddOption(overrideOption);
-            generateCommand.Handler = CommandHandler.Create<string, string, bool>((i, c, o) =>
+            Option contactSheetFolderOption = new(aliases: new[] { "--csFolder", "-c" },
+                    description: "Contactsheet(s) output folder.",
+                    argumentType: typeof(string),
+                    getDefaultValue: () => string.Empty)
             {
-                Generate(i, c, o);
+                IsRequired = false
+            };
+
+            Option overrideActionOption = new(aliases: new[] { "--overrideAction", "-o" },
+                    description: "Override if contact sheet exists",
+                    argumentType: typeof(ExistsAction),
+                    getDefaultValue: () => ExistsAction.Skip)
+            {
+                IsRequired = false
+            };
+
+            generateCommand.AddOption(photoFolderOption);
+            generateCommand.AddOption(contactSheetFolderOption);
+            generateCommand.AddOption(overrideActionOption);
+            generateCommand.Handler = CommandHandler.Create<string, string, ExistsAction>((photoFolder, csFolder, overrideAction) =>
+            {
+                Generate(photoFolder, csFolder, overrideAction);
             });
 
             rootCommand.AddCommand(generateCommand);
@@ -57,9 +65,8 @@ namespace nCtShGen
             return rootCommand.Invoke(args);
         }
 
-        public static void Generate(string i, string c, bool o)
+        public static void Generate(string photoFolder, string csFolder, ExistsAction overrideAction)
         {
-            MacroProvider macroProvider = new();
             var configuration = ConfigurationProvider.Read();
 
             Stopwatch swAll = new();
@@ -68,93 +75,29 @@ namespace nCtShGen
             Console.WriteLine("+-------------------------------------------------------");
             Console.WriteLine("| ContactSheet generator");
             Console.WriteLine("+-----------------------------+-------------------------");
-            Console.WriteLine("| Images input folder         | {0}", i);
-            Console.WriteLine("| Contact sheet output folder | {0}", c);
-            Console.WriteLine("| Override contact sheet(s)   | {0}", o);
+            Console.WriteLine("| Images input folder         | {0}", photoFolder);
+            Console.WriteLine("| Contact sheet output folder | {0}", csFolder);
+            Console.WriteLine("| Override contact sheet(s)   | {0}", overrideAction);
             Console.WriteLine("+-----------------------------+-------------------------");
 
-            macroProvider.Init();
-            // macroProvider.Init(
-            //     new string[] {
-            //         "rootfolder",
-            //         "currentfolder",
-            //         "dateYYYYMMDD",
-            //         "dateYYMMDD",
-            //         "yearYYYY",
-            //         "monthMM",
-            //         "dayDD"
-            //     }.AsEnumerable());
+            ContactSheetCollectionProvider cscProvider = new(configuration);
 
-            EnumerationOptions eo = new()
-            {
-                RecurseSubdirectories = true,
-                ReturnSpecialDirectories = false,
-                IgnoreInaccessible = true,
-                MaxRecursionDepth = configuration.ContactSheetRootFolderOnLevel
-            };
+            cscProvider.OnStart += (s, e) => { logger.LogInformation("Start"); };
+            cscProvider.OnFinish += (s, e) => { logger.LogInformation($"Finish (Duration = {e.Duration})"); };
+            cscProvider.OnWarning += (s, e) => { logger.LogWarning(e.Details); };
+            cscProvider.OnError += (s, e) => { logger.LogError(e.Details); };
+            cscProvider.OnScanFolder += (s, e) => { logger.LogDebug($"Scan folder. ({e.Details})"); };
+            cscProvider.OnSkipSaveContactSheet += (s, e) => { logger.LogWarning($"Skip save CS into [{e.Details}]. Reason: [{e.Reason}]"); };
+            cscProvider.OnSaveContactSheet += (s, e) => { logger.LogInformation($"Save CS into [{e.Details}]"); };
+            cscProvider.OnResolveContactSheetOutput += (s, e) => { logger.LogDebug($"Resolve CS output path as [{e.Details}])"); };
+            cscProvider.OnCreateDirectoryBeforeSaveContactSheet += (s, e) => { logger.LogDebug($"Create not existing directory [{e.Details}]"); };
 
-            ContactSheetProvider csProvider = new(configuration, Api.Model.ColorSchemaName.Dark);
+            cscProvider.OnStartGenerateContactSheet += (s, e) => { logger.LogInformation($"▶ Start generate CS for [{e.Folder}]"); };
+            cscProvider.OnFinishGenerateContactSheet += (s, e) => { logger.LogInformation($"◀ Finish generate CS for [{e.Folder}]. Item(s): [{e.AllItems}]"); };
+            cscProvider.OnAddContactSheetItem += (s, e) => { logger.LogDebug($"\t▣ Add CS item [{e.FileName}]"); };
+            cscProvider.OnWarningContactSheetItem += (s, e) => { logger.LogDebug($"\t□ Warning CS item [{e.FileName}]. Reason: [{e.Details}]"); };
 
-            string rootFolder = i;
-            string[] folders = Directory.GetDirectories(rootFolder, "*", eo);
-            foreach (string folder in folders)
-            {
-                string[] levels = folder
-                    .Replace(rootFolder, "")
-                    .Split(new char[] { '\\' }, StringSplitOptions.RemoveEmptyEntries);
-
-                int levelsCount = levels.Length;
-                if ((levelsCount >= 0) && (levelsCount == configuration.ContactSheetRootFolderOnLevel))
-                {
-                    string contactSheetRootFolder = rootFolder;
-                    for (int x = 0; x < configuration.ContactSheetRootFolderOnLevel; x++)
-                    {
-                        contactSheetRootFolder = Path.Combine(contactSheetRootFolder, levels[x]);
-                    }
-
-                    Console.WriteLine($"\t[+] Skan folder [{contactSheetRootFolder}]");
-
-                    DirectoryInfo di = new(contactSheetRootFolder);
-
-                    // macroProvider.Set("rootfolder", contactSheetRootFolder);
-                    // macroProvider.Set("currentfolder", di.Name);
-                    // macroProvider.Set("dateYYYYMMDD", DateTime.Now.ToString("yyyyMMdd"));
-                    // macroProvider.Set("yearYYYY", DateTime.Now.ToString("yyyy"));
-                    // macroProvider.Set("monthMM", DateTime.Now.ToString("MM"));
-                    // macroProvider.Set("dayDD", DateTime.Now.ToString("dd"));
-                    // macroProvider.Set("year", DateTime.Now.Year);
-                    // macroProvider.Set("month", DateTime.Now.Month);
-                    // macroProvider.Set("day", DateTime.Now.Day);
-
-                    string title = di.Name;
-                    string fileName = macroProvider.Resolve("${yearYYYY}_${currentfolder}");
-                    string contactSheetOutputPath = @"d:\temp\test\output";
-                    string path = Path.Combine(contactSheetOutputPath, string.Format($"{fileName}.jpg"));
-
-                    Console.WriteLine($"\t\t -- [output path]:{path}");
-
-                    var image = csProvider.GenerateContactSheet(title, di.FullName);
-                    if (image != null)
-                    {
-                        Console.WriteLine($"Write image into [{path}]");
-
-                        bool saveIsOk = ((File.Exists(path) == false) || (o == true));
-
-                        if (saveIsOk)
-                        {
-                            image.Save(path);
-                        }
-                    }
-                    else
-                    {
-                        Console.WriteLine("Image is empty.");
-                    }
-                }
-                else
-                {
-                    Console.WriteLine($"Skip [{folder}].");
-                }
-            }
+            cscProvider.Generate(photoFolder, csFolder);
 
             swAll.Stop();
             Console.WriteLine("--------------------------------------------------------");

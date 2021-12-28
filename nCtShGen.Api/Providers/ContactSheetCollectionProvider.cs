@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using System.Security;
 using Microsoft.Extensions.Configuration;
@@ -13,10 +14,24 @@ public class ContactSheetCollectionProvider
     private readonly ContactSheetProvider csProvider;
     private readonly ConfigurationItem configuration;
 
+    public event EventHandler<EventArgs> OnStart = default!;
+    public event EventHandler<ContactSheetCollectionSummaryEventArgs> OnFinish = default!;
+    public event EventHandler<ContactSheetCollectionErrorEventArgs> OnError = default!;
+    public event EventHandler<ContactSheetCollectionGenericEventArgs> OnWarning = default!;
+    public event EventHandler<ContactSheetCollectionGenericEventArgs> OnScanFolder = default!;
+    public event EventHandler<ContactSheetCollectionGenericEventArgs> OnSkipSaveContactSheet = default!;
+    public event EventHandler<ContactSheetCollectionGenericEventArgs> OnSaveContactSheet = default!;
+    public event EventHandler<ContactSheetCollectionGenericEventArgs> OnResolveContactSheetOutput = default!;
+    public event EventHandler<ContactSheetCollectionGenericEventArgs> OnCreateDirectoryBeforeSaveContactSheet = default!;
+
     public event EventHandler<ContactSheetEventArgs> OnStartGenerateContactSheet = default!;
     public event EventHandler<ContactSheetEventArgs> OnFinishGenerateContactSheet = default!;
     public event EventHandler<ContactSheetItemEventArgs> OnAddContactSheetItem = default!;
     public event EventHandler<ContactSheetItemWarningEventArgs> OnWarningContactSheetItem = default!;
+
+    public string DisplayTextOnAskOverride { get; set; } = " Override existing ContactSheet [{0}/{1}] ? ";
+    public char AskOverrideYesChar { get; set; } = 'Y';
+    public char AskOverrideNoChar { get; set; } = 'n';
 
     public ContactSheetCollectionProvider(ConfigurationItem configuration)
     {
@@ -33,8 +48,14 @@ public class ContactSheetCollectionProvider
         csProvider.OnWarningContactSheetItem += (o, e) => OnWarningContactSheetItem(o, e);
     }
 
-    public void Generate(string inputFolder, string outputFolder, string scanSubfolderStruct = "{1}\\+\\**")
+    public void Generate(string inputFolder, string outputFolder)
     {
+        OnStart?.Invoke(this, new EventArgs());
+
+        int contactSheetsCounter = 0;
+        Stopwatch sw = new();
+        sw.Start();
+
         EnumerationOptions eo = new()
         {
             RecurseSubdirectories = true,
@@ -43,69 +64,114 @@ public class ContactSheetCollectionProvider
             MaxRecursionDepth = configuration.ContactSheetSubfolderDeepLevel
         };
 
-        int counter = 0;
-
-        string[] folders = Directory.GetDirectories(inputFolder, "*", eo);
-        foreach (string folder in folders)
+        try
         {
-            string[] levels = folder
-                .Replace(inputFolder, "")
-                .Split(new char[] { '\\' }, StringSplitOptions.RemoveEmptyEntries);
+            inputFolder = Path.GetFullPath(inputFolder);
 
-            int levelsCount = levels.Length;
-            if ((levelsCount >= 0) && (levelsCount == configuration.ContactSheetRootFolderOnLevel))
+            string[] folders = new string[] { inputFolder };
+            string[] subDirFolders = Directory.GetDirectories(inputFolder, "*", eo);
+
+            Array.Copy(subDirFolders, folders, subDirFolders.Length);
+
+            foreach (string folder in folders)
             {
-                counter++;
-                string contactSheetRootFolder = inputFolder;
-                for (int x = 0; x < configuration.ContactSheetRootFolderOnLevel; x++)
+                string[] levels = folder
+                    .Replace(inputFolder, "")
+                    .Split(new char[] { '\\' }, StringSplitOptions.RemoveEmptyEntries);
+
+                int levelsCount = levels.Length;
+                if ((levelsCount >= 0) && (levelsCount == configuration.ContactSheetRootFolderOnLevel))
                 {
-                    contactSheetRootFolder = Path.Combine(contactSheetRootFolder, levels[x]);
-                }
-
-                Console.WriteLine($"\t[+] Skan folder [{contactSheetRootFolder}]");
-
-                DirectoryInfo di = new(contactSheetRootFolder);
-
-                macroProvider.Set(MacroName.rootFolderPath, contactSheetRootFolder);
-                macroProvider.Set(MacroName.currentFolderPath, folder);
-                macroProvider.Set(MacroName.currentFolderName, di.Name);
-                macroProvider.Set(MacroName.outputFolderPath, outputFolder);
-                macroProvider.Set(MacroName.counter, counter++);
-                macroProvider.Set(MacroName.date, DateTime.Now);
-                macroProvider.Set(MacroName.day, DateTime.Now);
-                macroProvider.Set(MacroName.month, DateTime.Now);
-                macroProvider.Set(MacroName.year, DateTime.Now);
-
-                string title = di.Name;
-                string fileName = macroProvider.Resolve("${yearYYYY}_${currentfolder}");
-                string contactSheetOutputPath = @"d:\temp\test\output";
-                string path = Path.Combine(contactSheetOutputPath, string.Format($"{fileName}.jpg"));
-
-                Console.WriteLine($"\t\t -- [output path]:{path}");
-
-                var image = csProvider.GenerateContactSheet(title, di.FullName);
-                if (image != null)
-                {
-                    Console.WriteLine($"Write image into [{path}]");
-
-                    bool saveIsOk = ((File.Exists(path) == false));// || (o == true));
-
-                    if (saveIsOk)
+                    contactSheetsCounter++;
+                    string contactSheetRootFolder = inputFolder;
+                    for (int x = 0; x < configuration.ContactSheetRootFolderOnLevel; x++)
                     {
+                        contactSheetRootFolder = Path.Combine(contactSheetRootFolder, levels[x]);
+                    }
+
+                    OnScanFolder?.Invoke(this, new ContactSheetCollectionGenericEventArgs(contactSheetRootFolder));
+
+                    DirectoryInfo di = new(contactSheetRootFolder);
+
+                    macroProvider.Set(MacroName.rootFolderPath, contactSheetRootFolder);
+                    macroProvider.Set(MacroName.currentFolderPath, folder);
+                    macroProvider.Set(MacroName.currentFolderName, di.Name);
+                    macroProvider.Set(MacroName.outputFolderPath, outputFolder);
+                    macroProvider.Set(MacroName.counter, contactSheetsCounter);
+                    macroProvider.SetValueFor(DateTime.Now, MacroName.date, MacroName.day, MacroName.month, MacroName.year);
+
+                    string title = di.Name;
+                    string path = macroProvider.Resolve(
+                        Path.Combine(configuration.ContactSheetFolder, configuration.ContactSheetFileNameTemplate));
+
+                    OnResolveContactSheetOutput?.Invoke(this, new ContactSheetCollectionGenericEventArgs(path));
+
+                    var image = csProvider.GenerateContactSheet(title, di.FullName);
+                    if (image != null)
+                    {
+                        FileInfo fi = new(path);
+
+                        if ((fi.Exists == true) && (configuration.ContactSheetExistsAction == ExistsAction.Skip))
+                        {
+                            OnSkipSaveContactSheet?.Invoke(this,
+                                new ContactSheetCollectionGenericEventArgs(fi.FullName, "File exists and ExistsAction is `Skip`"));
+                            continue;
+                        }
+
+                        if ((fi.Exists == true) && (configuration.ContactSheetExistsAction == ExistsAction.Ask))
+                        {
+                            Console.WriteLine();
+                            ConsoleColor foregroundColor = Console.ForegroundColor;
+                            ConsoleColor backgroundColor = Console.BackgroundColor;
+                            Console.ForegroundColor = ConsoleColor.Black;
+                            Console.BackgroundColor = ConsoleColor.DarkRed;
+
+                            Console.Write(DisplayTextOnAskOverride, AskOverrideYesChar, AskOverrideNoChar);
+                            Console.ForegroundColor = foregroundColor;
+                            Console.BackgroundColor = backgroundColor;
+                            Console.WriteLine();
+                            Console.WriteLine();
+                            char pressedKey = Console.ReadKey(false).KeyChar;
+                            if (pressedKey.Equals(AskOverrideNoChar))
+                            {
+                                OnSkipSaveContactSheet?.Invoke(this,
+                                    new ContactSheetCollectionGenericEventArgs(fi.FullName, $"File exists and ExistsAction is `Ask` but you choose '{pressedKey}' key."));
+                                continue;
+                            }
+                        }
+
+                        if (fi.Directory?.Exists == false)
+                        {
+                            OnCreateDirectoryBeforeSaveContactSheet?.Invoke(this, new ContactSheetCollectionGenericEventArgs(fi.Directory.FullName));
+                            fi.Directory.Create();
+                        }
+
+                        OnSaveContactSheet?.Invoke(this, new ContactSheetCollectionGenericEventArgs(path));
                         image.Save(path);
+                    }
+                    else
+                    {
+                        OnWarning?.Invoke(this,
+                            new ContactSheetCollectionGenericEventArgs("Image is empty"));
                     }
                 }
                 else
                 {
-                    Console.WriteLine("Image is empty.");
+                    OnWarning?.Invoke(this,
+                        new ContactSheetCollectionGenericEventArgs(string.Format($"Skip folder [{folder}]")));
                 }
             }
-            else
-            {
-                Console.WriteLine($"Skip [{folder}].");
-            }
         }
-
-
+        catch (Exception ex)
+        {
+            OnError?.Invoke(this,
+                new ContactSheetCollectionErrorEventArgs(ex.ToString(), ex));
+        }
+        finally
+        {
+            sw.Stop();
+            OnFinish?.Invoke(this,
+                new ContactSheetCollectionSummaryEventArgs(contactSheetsCounter, sw.Elapsed));
+        }
     }
 }

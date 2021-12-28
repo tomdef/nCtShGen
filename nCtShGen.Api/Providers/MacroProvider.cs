@@ -1,9 +1,5 @@
 using System.ComponentModel.DataAnnotations;
-using System.Drawing;
 using System.Globalization;
-using System.Runtime.Serialization;
-using ExifPhotoReader;
-using Microsoft.Extensions.Configuration;
 using nCtShGen.Api.Model;
 
 namespace nCtShGen.Api.Providers;
@@ -45,6 +41,14 @@ public class MacroProvider
         else
         {
             macros.Add(macro, valueAsString);
+        }
+    }
+
+    public void SetValueFor(object? value = null, params MacroName[] macros)
+    {
+        foreach (MacroName macro in macros)
+        {
+            Set(macro, value);
         }
     }
 

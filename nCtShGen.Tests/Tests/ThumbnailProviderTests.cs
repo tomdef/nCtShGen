@@ -41,7 +41,10 @@ public class ThumbnailProviderTests
         var (_, img) = tp.GetThumbnail(filePath);
 
         Assert.NotNull(img);
-        Assert.AreEqual(expectedWidth, img.Width);
-        Assert.AreEqual(expectedHeight, img.Height);
+        if (img != null)
+        {
+            Assert.AreEqual(expectedWidth, img.Width);
+            Assert.AreEqual(expectedHeight, img.Height);
+        }
     }
 }

@@ -16,8 +16,9 @@ public class ConfigurationProviderTests
     {
         var cp = ConfigurationProvider.Read(@".\TestData\appsettings.test.json");
 
+        Assert.AreEqual(@"d:\Temp\CS", cp.ContactSheetFolder, "Invalid ContactSheetFolder value");
         Assert.AreEqual(@"d:\Temp\Test", cp.RootPhotoFolder, "Invalid RootPhotoFolder value");
-        Assert.AreEqual(0, cp.ContactSheetRootFolderOnLevel, "Invalid FolderDeepLevel value");
+        Assert.AreEqual(1, cp.ContactSheetRootFolderOnLevel, "Invalid FolderDeepLevel value");
         Assert.AreEqual(3, cp.ContactSheetSubfolderDeepLevel, "Invalid FolderDeepLevel value");
     }
 }
