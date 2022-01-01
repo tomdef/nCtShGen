@@ -1,5 +1,2 @@
 # nCtShGen
-ContactSheet generator create preview of all images from specified folder
-
-###
-(project still "in construction")
+**C**on**t**act**Sh**eet **Gen**erator create preview of all images from specified folder(s).
