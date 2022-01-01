@@ -5,6 +5,7 @@ namespace nCtShGen.Api.Model;
 public record ConfigurationItem
 {
     public string RootPhotoFolder { get; set; } = default!;
+    public string ExcludeFolders { get; set; } = default!;
     public string ContactSheetFolder { get; set; } = default!;
     public string ContactSheetFileNameTemplate { get; set; } = default!;
     public byte ContactSheetRootFolderOnLevel { get; set; } = default!;

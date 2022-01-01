@@ -10,19 +10,11 @@ namespace nCtShGen
     public class Program
     {
         private static ILogger logger = default!;
+        private static ConfigurationItem configuration = default!;
 
         public static int Main(params string[] args)
         {
-
-            using var loggerFactory = LoggerFactory.Create(builder =>
-            {
-                builder
-                    .AddConsole(options => options.FormatterName = "nCtShGenLoggerFormatter")
-                    .AddConsoleFormatter<nCtShGen.LoggerFormatter, nCtShGen.LoggerOptions>()
-                    .AddFilter("nCtShGen", LogLevel.Trace);
-            });
-
-            logger = loggerFactory.CreateLogger<Program>();
+            configuration = ConfigurationProvider.Read();
 
             RootCommand rootCommand = new("Tool to generate contact sheet(s) for images.");
 
@@ -31,7 +23,7 @@ namespace nCtShGen
             Option photoFolderOption = new(aliases: new[] { "--photoFolder", "-p" },
                     description: "Image(s) input folder.",
                     argumentType: typeof(string),
-                    getDefaultValue: () => string.Empty)
+                    getDefaultValue: () => configuration.RootPhotoFolder)
             {
                 IsRequired = false
             };
@@ -39,7 +31,7 @@ namespace nCtShGen
             Option contactSheetFolderOption = new(aliases: new[] { "--csFolder", "-c" },
                     description: "Contactsheet(s) output folder.",
                     argumentType: typeof(string),
-                    getDefaultValue: () => string.Empty)
+                    getDefaultValue: () => configuration.ContactSheetFolder)
             {
                 IsRequired = false
             };
@@ -47,7 +39,15 @@ namespace nCtShGen
             Option overrideActionOption = new(aliases: new[] { "--overrideAction", "-o" },
                     description: "Override if contact sheet exists",
                     argumentType: typeof(ExistsAction),
-                    getDefaultValue: () => ExistsAction.Skip)
+                    getDefaultValue: () => configuration.ContactSheetExistsAction)
+            {
+                IsRequired = false
+            };
+
+            Option LogLevelOption = new(aliases: new[] { "--logLevel", "-l" },
+                    description: "Logging level ()",
+                    argumentType: typeof(LogLevel),
+                    getDefaultValue: () => LogLevel.Information)
             {
                 IsRequired = false
             };
@@ -55,9 +55,10 @@ namespace nCtShGen
             generateCommand.AddOption(photoFolderOption);
             generateCommand.AddOption(contactSheetFolderOption);
             generateCommand.AddOption(overrideActionOption);
-            generateCommand.Handler = CommandHandler.Create<string, string, ExistsAction>((photoFolder, csFolder, overrideAction) =>
+            generateCommand.AddOption(LogLevelOption);
+            generateCommand.Handler = CommandHandler.Create<string, string, ExistsAction, LogLevel>((photoFolder, csFolder, overrideAction, logLevel) =>
             {
-                Generate(photoFolder, csFolder, overrideAction);
+                Generate(photoFolder, csFolder, overrideAction, logLevel);
             });
 
             rootCommand.AddCommand(generateCommand);
@@ -65,9 +66,20 @@ namespace nCtShGen
             return rootCommand.Invoke(args);
         }
 
-        public static void Generate(string photoFolder, string csFolder, ExistsAction overrideAction)
+        public static void Generate(string photoFolder, string csFolder, ExistsAction overrideAction, LogLevel logLevel)
         {
-            var configuration = ConfigurationProvider.Read();
+            using var loggerFactory = LoggerFactory.Create(builder =>
+            {
+                builder
+                    .AddConsole(options => options.FormatterName = "nCtShGenLoggerFormatter")
+                    .AddConsoleFormatter<nCtShGen.LoggerFormatter, nCtShGen.LoggerOptions>()
+                    .AddFilter("nCtShGen", logLevel);
+            });
+
+            logger = loggerFactory.CreateLogger<Program>();
+
+
+            configuration.ContactSheetExistsAction = overrideAction;
 
             Stopwatch swAll = new();
             swAll.Start();
@@ -77,18 +89,21 @@ namespace nCtShGen
             Console.WriteLine("+-----------------------------+-------------------------");
             Console.WriteLine("| Images input folder         | {0}", photoFolder);
             Console.WriteLine("| Contact sheet output folder | {0}", csFolder);
-            Console.WriteLine("| Override contact sheet(s)   | {0}", overrideAction);
+            Console.WriteLine("| Contact sheet exists action | {0}", overrideAction);
+            Console.WriteLine("+-----------------------------+-------------------------");
+            Console.WriteLine("| Logging level               | {0}", logLevel);
             Console.WriteLine("+-----------------------------+-------------------------");
 
             ContactSheetCollectionProvider cscProvider = new(configuration);
 
-            cscProvider.OnStart += (s, e) => { logger.LogInformation("Start"); };
-            cscProvider.OnFinish += (s, e) => { logger.LogInformation($"Finish (Duration = {e.Duration})"); };
+            cscProvider.OnStart += (s, e) => { logger.LogInformation("Start."); };
+            cscProvider.OnFinish += (s, e) => { logger.LogInformation($"Finish. Duration: [{e.Duration}]"); };
             cscProvider.OnWarning += (s, e) => { logger.LogWarning(e.Details); };
             cscProvider.OnError += (s, e) => { logger.LogError(e.Details); };
-            cscProvider.OnScanFolder += (s, e) => { logger.LogDebug($"Scan folder. ({e.Details})"); };
-            cscProvider.OnSkipSaveContactSheet += (s, e) => { logger.LogWarning($"Skip save CS into [{e.Details}]. Reason: [{e.Reason}]"); };
-            cscProvider.OnSaveContactSheet += (s, e) => { logger.LogInformation($"Save CS into [{e.Details}]"); };
+            cscProvider.OnScanFolder += (s, e) => { logger.LogDebug($"Scan folder [{e.Details}]"); };
+            cscProvider.OnSkipSaveContactSheet += (s, e) => { logger.LogWarning($"□ Skip save CS into [{e.Details}]. Reason: [{e.Reason}]"); };
+            cscProvider.OnSaveContactSheet += (s, e) => { logger.LogInformation($"■ Save CS into [{e.Details}]"); };
+            cscProvider.OnOverrideContactSheet += (s, e) => { logger.LogInformation($"▣ Override CS into [{e.Details}]"); };
             cscProvider.OnResolveContactSheetOutput += (s, e) => { logger.LogDebug($"Resolve CS output path as [{e.Details}])"); };
             cscProvider.OnCreateDirectoryBeforeSaveContactSheet += (s, e) => { logger.LogDebug($"Create not existing directory [{e.Details}]"); };
 

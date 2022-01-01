@@ -20,6 +20,7 @@ public class ContactSheetCollectionProvider
     public event EventHandler<ContactSheetCollectionGenericEventArgs> OnWarning = default!;
     public event EventHandler<ContactSheetCollectionGenericEventArgs> OnScanFolder = default!;
     public event EventHandler<ContactSheetCollectionGenericEventArgs> OnSkipSaveContactSheet = default!;
+    public event EventHandler<ContactSheetCollectionGenericEventArgs> OnOverrideContactSheet = default!;
     public event EventHandler<ContactSheetCollectionGenericEventArgs> OnSaveContactSheet = default!;
     public event EventHandler<ContactSheetCollectionGenericEventArgs> OnResolveContactSheetOutput = default!;
     public event EventHandler<ContactSheetCollectionGenericEventArgs> OnCreateDirectoryBeforeSaveContactSheet = default!;
@@ -70,8 +71,11 @@ public class ContactSheetCollectionProvider
 
             string[] folders = new string[] { inputFolder };
             string[] subDirFolders = Directory.GetDirectories(inputFolder, "*", eo);
-
-            Array.Copy(subDirFolders, folders, subDirFolders.Length);
+            string[] excludeFolders = configuration.ExcludeFolders.Split(';', StringSplitOptions.RemoveEmptyEntries);
+            folders = folders.Concat(subDirFolders)
+                .Except(excludeFolders)
+                .Except(new string[] { outputFolder })
+                .ToArray();
 
             foreach (string folder in folders)
             {
@@ -104,20 +108,20 @@ public class ContactSheetCollectionProvider
                     string path = macroProvider.Resolve(
                         Path.Combine(configuration.ContactSheetFolder, configuration.ContactSheetFileNameTemplate));
 
+                    FileInfo fi = new(path);
+
                     OnResolveContactSheetOutput?.Invoke(this, new ContactSheetCollectionGenericEventArgs(path));
+
+                    if ((fi.Exists == true) && (configuration.ContactSheetExistsAction == ExistsAction.Skip))
+                    {
+                        OnSkipSaveContactSheet?.Invoke(this,
+                            new ContactSheetCollectionGenericEventArgs(fi.FullName, "File exists and ExistsAction is `Skip`"));
+                        continue;
+                    }
 
                     var image = csProvider.GenerateContactSheet(title, di.FullName);
                     if (image != null)
                     {
-                        FileInfo fi = new(path);
-
-                        if ((fi.Exists == true) && (configuration.ContactSheetExistsAction == ExistsAction.Skip))
-                        {
-                            OnSkipSaveContactSheet?.Invoke(this,
-                                new ContactSheetCollectionGenericEventArgs(fi.FullName, "File exists and ExistsAction is `Skip`"));
-                            continue;
-                        }
-
                         if ((fi.Exists == true) && (configuration.ContactSheetExistsAction == ExistsAction.Ask))
                         {
                             Console.WriteLine();
@@ -131,7 +135,7 @@ public class ContactSheetCollectionProvider
                             Console.BackgroundColor = backgroundColor;
                             Console.WriteLine();
                             Console.WriteLine();
-                            char pressedKey = Console.ReadKey(false).KeyChar;
+                            char pressedKey = Console.ReadKey(true).KeyChar;
                             if (pressedKey.Equals(AskOverrideNoChar))
                             {
                                 OnSkipSaveContactSheet?.Invoke(this,
@@ -146,7 +150,15 @@ public class ContactSheetCollectionProvider
                             fi.Directory.Create();
                         }
 
-                        OnSaveContactSheet?.Invoke(this, new ContactSheetCollectionGenericEventArgs(path));
+                        if (fi.Exists)
+                        {
+                            OnOverrideContactSheet?.Invoke(this, new ContactSheetCollectionGenericEventArgs(path));
+                        }
+                        else
+                        {
+                            OnSaveContactSheet?.Invoke(this, new ContactSheetCollectionGenericEventArgs(path));
+                        }
+
                         image.Save(path);
                     }
                     else
