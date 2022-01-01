@@ -7,8 +7,6 @@ public class ConfigurationProvider
 {
     public static ConfigurationItem Read(string configFileName = "appsettings.json")
     {
-        Console.WriteLine("current folder:{0}", AppDomain.CurrentDomain.BaseDirectory);
-
         var config = new ConfigurationBuilder()
                             .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
                             .AddJsonFile(configFileName).Build();
