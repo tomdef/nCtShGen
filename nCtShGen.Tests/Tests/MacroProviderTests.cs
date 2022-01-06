@@ -33,11 +33,11 @@ public class MacroProviderTests
         macroProvider.Set(MacroName.day, dt);
         macroProvider.Set(MacroName.counter, 1);
 
-        string resoldedPath = macroProvider.Resolve(@"{rootPath}\{date}_{counter}");
-        Assert.AreEqual(@"c:\root\20211201_1", resoldedPath, "Invalid resolved path");
+        string resoldedPath = macroProvider.Resolve(@"{rootFolderPath}\{counter}.jpg");
+        Assert.AreEqual(@"c:\root\1.jpg", resoldedPath, "Invalid resolved path");
 
         macroProvider.Set(MacroName.counter, 2);
-        resoldedPath = macroProvider.Resolve(@"{rootPath}\{date}_{counter}");
-        Assert.AreEqual(@"c:\root\20211201_2", resoldedPath, "Invalid resolved path");
+        resoldedPath = macroProvider.Resolve(@"{rootFolderPath}\{counter}.jpg");
+        Assert.AreEqual(@"c:\root\2.jpg", resoldedPath, "Invalid resolved path");
     }
 }
