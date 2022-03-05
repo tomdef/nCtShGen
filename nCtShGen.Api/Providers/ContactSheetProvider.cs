@@ -224,6 +224,11 @@ public class ContactSheetProvider
             csWidth = csMinimumWidth;
         }
 
+        if ((csWidth == 0) || (csHeight == 0))
+        {
+            return null;
+        }
+
         Bitmap csImage = new(csWidth, csHeight);
         Graphics gs = Graphics.FromImage(csImage);
 

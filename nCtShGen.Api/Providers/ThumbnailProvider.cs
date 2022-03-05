@@ -44,7 +44,17 @@ public class ThumbnailProvider
 
         if ((exifInfo.Width == 0) || (exifInfo.Height == 0))
         {
-            return (exifInfo, null);
+            Image tmpImg = Image.FromFile(filePath);
+            if (tmpImg != null)
+            {
+                exifInfo.Width = tmpImg.Width;
+                exifInfo.Height = tmpImg.Height;
+
+                if ((exifInfo.Width == 0) || (exifInfo.Height == 0))
+                {
+                    return (exifInfo, null);
+                }
+            }
         }
 
         Image image = this.GetThumbnail(exifInfo);

@@ -26,6 +26,7 @@ public class ContactSheetProviderTests
     [Category("Providers")]
     [TestCase(@".\TestData\test001.jpg")]
     [TestCase(@".\TestData\test002.jpg")]
+    [TestCase(@".\TestData\testError.jpg")]
     public void ContactSheetProvider_GenerateContactSheetItem(string filePath)
     {
         ContactSheetProvider contactSheetProvider = new(configurationItem, ColorSchemaName.Light);
