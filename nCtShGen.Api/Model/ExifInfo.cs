@@ -19,6 +19,8 @@ public record ExifInfo
     public int Orientation { get; set; }
     public RotateFlipType RotateType { get; set; }
     public string GpsInfo { get; set; } = string.Empty;
+    public bool IsValid { get; set; } = false;
+    public string ErrorMessage { get; set; } = string.Empty;
 
     private string ShutterSpeedToString()
     {
@@ -53,7 +55,7 @@ public record ExifInfo
 
     public override string ToString()
     {
-        if (Width == 0)
+        if (IsValid == false)
         {
             return " (no EXIF data) ";
         }

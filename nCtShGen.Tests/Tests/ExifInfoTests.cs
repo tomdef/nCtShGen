@@ -28,7 +28,8 @@ public class ExifInfoTests
                     Name = "test.jpg",
                     Path = "c:\\test\\test.jpg",
                     ShutterSpeed = 1f,
-                    Width = 1920
+                    Width = 1920,
+                    IsValid = true
                 }
             ),
             new KeyValuePair<string, ExifInfo>("ƒ4 1/80s 35mm Iso100",
@@ -42,7 +43,23 @@ public class ExifInfoTests
                     Name = "test.jpg",
                     Path = "c:\\test\\test.jpg",
                     ShutterSpeed = 80,
-                    Width = 1920
+                    Width = 1920,
+                    IsValid = true
+                }
+            ),
+            new KeyValuePair<string, ExifInfo>(" (no EXIF data) ",
+                new()
+                {
+                    Aperture = 4f,
+                    ExposureTime = 0.0125f,
+                    FocalLength = 35,
+                    Height = 1080,
+                    Iso = 100,
+                    Name = "test.jpg",
+                    Path = "c:\\test\\test.jpg",
+                    ShutterSpeed = 80,
+                    Width = 1920,
+                    IsValid = false
                 }
             )
         };

@@ -2,7 +2,7 @@ using NUnit.Framework;
 using System;
 using nCtShGen.Api.Providers;
 using nCtShGen.Api.Model;
-using System.Drawing;
+using System.IO;
 
 namespace nCtShGen.Tests.Tests;
 
@@ -16,22 +16,17 @@ public class ContactSheetCollectionProviderTests
         configurationItem = ConfigurationProvider.Read(@".\TestData\appsettings.test.json");
         configurationItem.ContactSheetRootFolderOnLevel = 0;
         configurationItem.ContactSheetExistsAction = ExistsAction.Skip;
-
-
-        // configurationItem = new ConfigurationItem()
-        // {
-        //     Thumbnail = new ConfigurationThumbnailItem()
-        //     {
-        //         MaxWidth = 300,
-        //         MaxHeight = 300
-        //     }
-        // };
     }
 
     [Category("Providers")]
     [TestCase(@".\TestData", "")]
     public void ContactSheetCollectionProviderTests_Generate(string inputFolder, string outputFolder)
     {
+        int requiredCounter = Directory.GetFiles(inputFolder, "*.jpg").Length;
+        int counter = 0;
+
+        configurationItem.ContactSheetFolder = "";
+        configurationItem.RootPhotoFolder = "";
         ContactSheetCollectionProvider cscProvider = new(configurationItem);
 
         cscProvider.OnError += (s, e) => { Console.WriteLine($"Error. {e.Details}"); };
@@ -45,11 +40,19 @@ public class ContactSheetCollectionProviderTests
         cscProvider.OnCreateDirectoryBeforeSaveContactSheet += (s, e) => { Console.WriteLine($"Create directory. ({e.Details})"); };
 
         cscProvider.OnStartGenerateContactSheet += (s, e) => { Console.WriteLine($"\t* Start generate CS. ({e.Folder})"); };
-        cscProvider.OnFinishGenerateContactSheet += (s, e) => { Console.WriteLine($"\t* Finish generate CS. ({e.Folder}, {e.AllItems})"); };
-        cscProvider.OnAddContactSheetItem += (s, e) => { Console.WriteLine($"\t* Add CS item. ({e.FileName})"); };
+        cscProvider.OnFinishGenerateContactSheet += (s, e) =>
+        {
+            Console.WriteLine($"\t* Finish generate CS. ({e.Folder}, {e.AllItems})");
+            counter = e.AllItems;
+        };
+        cscProvider.OnAddContactSheetItem += (s, e) =>
+        {
+            Console.WriteLine($"\t* Add CS item. ({e.FileName})");
+        };
         cscProvider.OnWarningContactSheetItem += (s, e) => { Console.WriteLine($"\t* Warning CS item. ({e.FileName}, {e.Details})"); };
 
         cscProvider.Generate(inputFolder, outputFolder);
+        Assert.AreEqual(requiredCounter, counter);
     }
 
 }

@@ -66,6 +66,11 @@ public class ContactSheetProvider
         this.colorSchemaProvider = new();
         this.colorSchema = colorSchemaProvider.Get(colorSchemaName);
 
+        this.thumbnailProvider.OnWarningThumbnail += (s, e) =>
+        {
+            OnWarningContactSheetItem?.Invoke(this, new ContactSheetItemWarningEventArgs(e.FileName, e.Details));
+        };
+
         CreateUISettings();
     }
 

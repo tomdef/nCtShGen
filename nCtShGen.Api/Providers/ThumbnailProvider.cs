@@ -1,14 +1,18 @@
 using System.Collections;
+using System.Diagnostics;
 using System.Drawing;
 using ExifPhotoReader;
 using Microsoft.Extensions.FileProviders;
 using nCtShGen.Api.Model;
+using nCtShGen.Api.Model.Events;
 
 namespace nCtShGen.Api.Providers;
 
 public class ThumbnailProvider
 {
     private readonly ConfigurationThumbnailItem configurationItem = default!;
+
+    public event EventHandler<ThumbnailWarningEventArgs> OnWarningThumbnail = default!;
 
     public ThumbnailProvider(ConfigurationThumbnailItem configurationItem)
     {
@@ -20,20 +24,12 @@ public class ThumbnailProvider
         Image image = Image.FromFile(exifInfo.Path);
         var (width, height) = GetThumbnailSize(exifInfo.Width, exifInfo.Height, exifInfo.IsHorizontal());
 
-
         image = (Image)(new Bitmap(image, new Size(width, height)));
 
         if (exifInfo.RotateType != RotateFlipType.RotateNoneFlipNone)
         {
             image.RotateFlip(exifInfo.RotateType);
         }
-
-        // if ((exifInfo.Width == 0) || (exifInfo.Height == 0) ||
-        //     (exifInfo.RotateType != RotateFlipType.RotateNoneFlipNone))
-        // {
-        //     width = image.Width;
-        //     height = image.Height;
-        // }
 
         return image;
     }
@@ -47,8 +43,12 @@ public class ThumbnailProvider
             Image tmpImg = Image.FromFile(filePath);
             if (tmpImg != null)
             {
+
                 exifInfo.Width = tmpImg.Width;
                 exifInfo.Height = tmpImg.Height;
+
+                string msg = $"Image size not exists in exif and it is taken directly from image size ({exifInfo.Width}x{exifInfo.Height})";
+                OnWarningThumbnail?.Invoke(this, new ThumbnailWarningEventArgs(filePath, msg));
 
                 if ((exifInfo.Width == 0) || (exifInfo.Height == 0))
                 {
